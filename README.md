@@ -43,3 +43,8 @@ docker network inspect odoh-lab_lab_net
 Alterar o ip no arquivo resolv.conf da pasta raiz
 
 descomentar a linha no dockercompose
+
+
+# QUERY DO WIRESHARK 
+(ip.addr == 191.36.15.17 and ip.dst == 191.36.15.17)  or ip.src == 191.36.15.17
+## alterar para o IP do seu computador
