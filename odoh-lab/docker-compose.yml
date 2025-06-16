@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # 1. Contêiner do Cliente (Onde os alunos farão as consultas)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: client_lab
+    networks:
+      - lab_net
+    volumes:
+      - ./odoh-client-build:/app/odoh-client-build:ro
+      # - ./resolv.conf:/etc/resolv.conf:ro
+    stdin_open: true 
+    tty: true        
+    command: /bin/bash
+
+  # 2. Proxy DNS over HTTPS (DoH)
+  doh-proxy:
+    image: cloudflare/cloudflared:latest
+    container_name: doh_proxy_lab
+    networks:
+      - lab_net
+    ports:
+      - "5053:53/udp" 
+    cap_add:
+      - NET_BIND_SERVICE
+    command: ["proxy-dns", "--address", "0.0.0.0", "--port", "53", "--upstream", "https://1.1.1.1/dns-query", "--upstream", "https://1.0.0.1/dns-query"]
+    restart: unless-stopped
+
+
+  # 3. Builder do Cliente ODoH
+  odoh-client-builder:
+    build:
+      context: ./odoh-client-builder
+      dockerfile: Dockerfile
+    container_name: odoh_client_builder_lab
+    networks:
+      - lab_net
+    volumes:
+      - ./odoh-client-build:/app/output
+    command: /bin/bash -c "cd /app/odoh-client && go mod tidy && go mod verify && go build -o /app/output/odoh-client ./cmd/... && cp /app/output/odoh-client /app/output/odoh-client-ready"
+    depends_on:
+      - client 
+
+networks:
+  lab_net:
+    driver: bridge
